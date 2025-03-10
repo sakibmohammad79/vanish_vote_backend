@@ -3,6 +3,15 @@ import { PollServices } from "./poll.service";
 import catchAsync from "../../../shared/catchAsync";
 import { sendResponse } from "../../../shared/sendResponse";
 import { RequestHandler } from "express";
+const getAllPoll: RequestHandler = catchAsync(async (req, res) => {
+  const result = await PollServices.getAllPollFromDB();
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "All poll data fetch successfully!",
+    data: result,
+  });
+});
 const createPoll: RequestHandler = catchAsync(async (req, res) => {
   const payload = req.body;
   const result = await PollServices.createPollIntoDB(payload);
@@ -25,8 +34,21 @@ const addVote: RequestHandler = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const pollResult: RequestHandler = catchAsync(async (req, res) => {
+  const { pollId } = req.params;
+
+  const result = await PollServices.getPollResults(pollId);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Poll result fetched successfully!",
+    data: result,
+  });
+});
 
 export const PollControllers = {
+  getAllPoll,
   createPoll,
   addVote,
+  pollResult,
 };

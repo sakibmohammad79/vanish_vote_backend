@@ -4,6 +4,11 @@ import ApiError from "../../error/ApiError";
 import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
 
+const getAllPollFromDB = async () => {
+  const allPollData = await PollModel.find();
+  return allPollData;
+};
+
 const createPollIntoDB = async (payload: any) => {
   const { question, options, expiresIn, showResultsAfterExpire } = payload;
   const expiresAt = new Date(Date.now() + expiresIn * 60 * 60 * 1000);
@@ -30,8 +35,27 @@ const addVoteInPoll = async (pollId: any, optionIndex: any) => {
 
   return addVoteInPoll;
 };
+const getPollResults = async (pollId: any) => {
+  console.log(pollId);
+  const poll = await PollModel.findById(pollId);
+
+  if (!poll) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Poll not found!");
+  }
+
+  if (poll.showResultsAfterExpire && new Date() < poll.expiresAt) {
+    throw new ApiError(
+      StatusCodes.NOT_FOUND,
+      "Results are hidden until the poll ends"
+    );
+  }
+
+  return poll;
+};
 
 export const PollServices = {
+  getAllPollFromDB,
   createPollIntoDB,
   addVoteInPoll,
+  getPollResults,
 };
