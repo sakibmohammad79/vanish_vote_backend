@@ -1,8 +1,15 @@
 import mongoose, { Schema } from "mongoose";
 
-export interface IPoll {
+interface PollOption {
+  text: string;
+  votes: number;
+}
+
+export interface IPoll extends Document {
   question: string;
-  options: { text: string; votes: number }[];
+  options: PollOption[];
   expiresAt: Date;
-  showResultsAfterExpire: boolean;
+  hideResults: boolean;
+  reactions: { like: number; trending: number };
+  createdAt: Date;
 }

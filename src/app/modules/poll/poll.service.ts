@@ -2,7 +2,21 @@ import { Request, RequestHandler, Response } from "express";
 import { PollModel } from "./poll.model";
 import ApiError from "../../error/ApiError";
 import { StatusCodes } from "http-status-codes";
-import mongoose from "mongoose";
+
+// Function to calculate expiration time based on duration in hours
+const calculateExpirationTime = (duration: number): Date => {
+  if (isNaN(duration) || duration <= 0) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Invalid duration. Duration must be a positive number."
+    );
+  }
+
+  const currentDate = new Date();
+  currentDate.setHours(currentDate.getHours() + duration);
+
+  return currentDate;
+};
 
 const getAllPollFromDB = async () => {
   const allPollData = await PollModel.find();
@@ -10,19 +24,27 @@ const getAllPollFromDB = async () => {
 };
 
 const createPollIntoDB = async (payload: any) => {
-  const { question, options, expiresIn, showResultsAfterExpire } = payload;
-  const expiresAt = new Date(Date.now() + expiresIn * 60 * 60 * 1000);
+  const { question, options, duration, hideResults } = payload;
 
-  const pollData = {
+  if (!question || !options || options.length < 2) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Poll must have at least two options."
+    );
+  }
+
+  // Calculate expiresAt based on the duration (in hours)
+  const expiresAt = calculateExpirationTime(duration);
+
+  // Create new poll
+  const poll = await PollModel.create({
     question,
     options,
     expiresAt,
-    showResultsAfterExpire,
-  };
+    hideResults,
+  });
 
-  const createPollData = await PollModel.create(pollData);
-
-  return createPollData;
+  return poll;
 };
 const addVoteInPoll = async (pollId: any, optionIndex: any) => {
   const poll = await PollModel.findById(pollId);
@@ -36,21 +58,35 @@ const addVoteInPoll = async (pollId: any, optionIndex: any) => {
   return addVoteInPoll;
 };
 const getPollResults = async (pollId: any) => {
-  console.log(pollId);
   const poll = await PollModel.findById(pollId);
 
   if (!poll) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Poll not found!");
   }
 
-  if (poll.showResultsAfterExpire && new Date() < poll.expiresAt) {
-    throw new ApiError(
-      StatusCodes.NOT_FOUND,
-      "Results are hidden until the poll ends"
-    );
+  return poll;
+};
+
+export const addReaction = async (pollId: string, reactionType: string) => {
+  if (!["like", "trending"].includes(reactionType)) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Invalid reaction type");
   }
 
-  return poll;
+  const poll = await PollModel.findById(pollId);
+  if (!poll) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Poll not found");
+  }
+
+  // Increment the respective reaction counter
+  if (reactionType === "like") {
+    poll.reactions.like += 1;
+  } else if (reactionType === "trending") {
+    poll.reactions.trending += 1;
+  }
+
+  const pollData = await poll.save();
+
+  return pollData;
 };
 
 export const PollServices = {
@@ -58,4 +94,5 @@ export const PollServices = {
   createPollIntoDB,
   addVoteInPoll,
   getPollResults,
+  addReaction,
 };

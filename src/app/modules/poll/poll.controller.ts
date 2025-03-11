@@ -45,10 +45,23 @@ const pollResult: RequestHandler = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const addReaction: RequestHandler = catchAsync(async (req, res) => {
+  const { pollId } = req.params;
+  const { reactionType } = req.body;
+
+  const result = await PollServices.addReaction(pollId, reactionType);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "add reaction successfully!",
+    data: result,
+  });
+});
 
 export const PollControllers = {
   getAllPoll,
   createPoll,
   addVote,
   pollResult,
+  addReaction,
 };
